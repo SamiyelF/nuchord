@@ -86,17 +86,16 @@ public class Sound {
 		try {
 			double time = this.currentsample / (double) sampleRate;
 			double bigsample = 0;
-			int overtonecount = 4;
+			int overtonecount = 5;
 			for (FreqVol i : this.freqvols) {
-				for (int over = 1; over < overtonecount; over++) {
-
-					bigsample += this.wave.apply(time * i.frequency * Math.TAU * Math.pow(2, over)) * i.volume
-							/ over;
-
+				for (int over = 0; over < overtonecount; over++) {
+					bigsample += this.wave.apply(time * i.frequency * Math.TAU * Math.pow(2, (int) over - (over /
+							2))) * i.volume
+							/ (over + 1);
 				}
 			}
 			bigsample /= freqvols.size();
-			bigsample *= Short.MAX_VALUE / 5; // temporary fix, figure out a real way to stop overflow
+			bigsample *= Short.MAX_VALUE / 5; // temporary fix, figure out a real way to stop overflow (based on overtonecount)
 			short sample = (short) bigsample;
 			return sample;
 		} catch (NullPointerException e) {
