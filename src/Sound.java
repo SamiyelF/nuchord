@@ -96,7 +96,7 @@ public class Sound {
 				}
 			}
 			bigsample /= freqvols.size();
-			bigsample *= Short.MAX_VALUE / 4;
+			bigsample *= Short.MAX_VALUE / 5; // temporary fix, figure out a real way to stop overflow
 			short sample = (short) bigsample;
 			return sample;
 		} catch (NullPointerException e) {
