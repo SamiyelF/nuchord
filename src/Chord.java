@@ -161,6 +161,7 @@ public class Chord {
 		Dominant, // ,','(,)',
 		Submediant, // ,',',('),
 		LeadingTone, // ,',','(,)
+		None, // ,',',',
 	}
 
 	enum Modifier {
@@ -211,6 +212,8 @@ public class Chord {
 			case LeadingTone:
 				rootoffset = 11;
 				break;
+			case None:
+				return new ArrayList<Note>();
 		}
 		Note root = this.key.offset_semitones(rootoffset);
 		ArrayList<Note> noteslist = new ArrayList<Note>();

@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.Function;
 import java.util.Objects;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 class FreqVol {
 	public double frequency, volume;
@@ -46,59 +49,60 @@ public class Sound {
 	int bufferSize = 1024;
 
 	public int currentsample;
-	public ArrayList<FreqVol> freqvols;
+	public List<FreqVol> freqvols = new CopyOnWriteArrayList<>();
 	public Function<Double, Double> wave;
 	public Flags flags;
 
-	public Sound(FreqVol[] freqvols, Function<Double, Double> wave) {
-		this.currentsample = 0;
-		this.freqvols = new ArrayList<>(Arrays.asList(freqvols));
-		this.wave = wave;
-		this.flags = new Flags(SoundState.Paused);
-	}
-
 	public void setFreqvols(Chord chord, float vol) {
-		ArrayList<FreqVol> newfreqvols = new ArrayList<FreqVol>();
-		for (Chord.Note note : chord.notes()) {
-			System.out.println("F: " + note.frequency());
-			newfreqvols.add(new FreqVol(note.frequency(), vol));
-		}
-		if (newfreqvols.equals(this.freqvols)) {
-			return;
-		}
 		this.freqvols.clear();
-		this.freqvols = newfreqvols;
-		System.out.println(freqvols.size());
+		for (Chord.Note note : chord.notes()) {
+			this.freqvols.add(new FreqVol(note.frequency(), vol));
+		}
 	}
 
-	public void setFreqvols(Chord chord) {
-		setFreqvols(chord, 1);
+	public void addFreqvols(Chord chord, float vol) {
+		for (Chord.Note note : chord.notes()) {
+			FreqVol freqvol = new FreqVol(note.frequency(), vol);
+			if (!this.freqvols.contains(freqvol)) {
+				this.freqvols.add(freqvol);
+			}
+		}
+	}
+
+	public void subFreqvols(Chord chord, float vol) {
+		for (Chord.Note note : chord.notes()) {
+			this.freqvols.remove(new FreqVol(note.frequency(), vol));
+		}
 	}
 
 	public Sound(ArrayList<FreqVol> freqvols, Function<Double, Double> wave) {
 		this.currentsample = 0;
-		this.freqvols = freqvols;
+		this.freqvols = new CopyOnWriteArrayList<FreqVol>(freqvols);
 		this.wave = wave;
+		this.flags = new Flags(SoundState.Running);
 	}
 
 	public short sample() {
-		double time = this.currentsample / (double) sampleRate;
-		double bigsample = 0;
-		int overtonecount = 4;
-		for (FreqVol i : this.freqvols) {
-			for (int over = 1; over < overtonecount; over++) {
-				try {
+		try {
+			double time = this.currentsample / (double) sampleRate;
+			double bigsample = 0;
+			int overtonecount = 4;
+			for (FreqVol i : this.freqvols) {
+				for (int over = 1; over < overtonecount; over++) {
+
 					bigsample += this.wave.apply(time * i.frequency * Math.TAU * Math.pow(2, over)) * i.volume
 							/ over;
-				} catch (NullPointerException e) {
-					System.err.println(e);
+
 				}
 			}
+			bigsample /= freqvols.size();
+			bigsample *= Short.MAX_VALUE / 4;
+			short sample = (short) bigsample;
+			return sample;
+		} catch (NullPointerException e) {
+			System.err.println(e);
 		}
-		bigsample /= freqvols.size();
-		bigsample *= Short.MAX_VALUE / 4;
-		short sample = (short) bigsample;
-		return sample;
+		return 0;
 	}
 
 	public void play() {
