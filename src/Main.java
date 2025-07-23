@@ -1,6 +1,12 @@
+import java.awt.BorderLayout;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
@@ -9,6 +15,7 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.*;
 import java.util.Collections;
 import java.util.List;
+import java.util.Scanner;
 
 class Vars {
 	public static AtomicReference<Function<Double, Double>> sineWave = new AtomicReference<>(x -> Math.sin(x));
@@ -111,15 +118,28 @@ public class Main {
 		 */
 		JFrame frame = new JFrame("Window Title");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setSize(400, 300);
-		frame.setResizable(false);
+		frame.setSize(800, 600);
+		frame.setResizable(true);
 		frame.setFocusable(true);
 		frame.requestFocusInWindow();
+		frame.setLocation((1920 - 800) / 2, (1080 - 600) / 2);
 		MultiKeyPressListener listener = new MultiKeyPressListener();
 		frame.addKeyListener(listener);
+		JPanel panel = new JPanel();
+		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+		String controlstext = new String(Files.readAllBytes(Paths.get("src/controls.html")), StandardCharsets.UTF_8);
+		JLabel info = new JLabel(controlstext);
+		info.setVerticalAlignment(JLabel.TOP);
+		panel.add(info);
+
+		JLabel debuginfo = new JLabel("");
+		debuginfo.setVerticalAlignment(JLabel.BOTTOM);
+		panel.add(debuginfo);
+
+		frame.setContentPane(panel);
+
 		frame.setVisible(true);
-		JLabel label = new JLabel("");
-		frame.add(label);
 
 		Thread gui = new Thread() {
 			public void run() {
@@ -133,11 +153,12 @@ public class Main {
 					text.append("</html>");
 
 					SwingUtilities.invokeLater(() -> {
-						label.setText(text.toString());
+						debuginfo.setText(text.toString());
 					});
 				}
 			}
 		};
+
 		Thread input = new Thread() {
 			public void run() {
 				while (true) {
