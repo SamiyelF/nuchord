@@ -42,8 +42,7 @@ public class Sound {
 	}
 
 	public class Effects {
-		// (Tremelo, Flanger, Chorus, Glide, ADSR, (Filter?))
-		public class Tremelo { // change volume
+		public class Tremelo {
 			public double stren, freq;
 			private double phase = 0;
 
@@ -61,7 +60,7 @@ public class Sound {
 			}
 		}
 
-		public class Flanger { // change frequency
+		public class Flanger {
 			public double stren, freq;
 			private double phase = 0;
 
@@ -79,7 +78,7 @@ public class Sound {
 			}
 		}
 
-		public class Glide { // change chord progressively over time
+		public class Glide {
 			public List<FreqVol> startChord, targetChord;
 			public double totalTimeSeconds;
 			private double elapsedTimeSeconds;
@@ -200,7 +199,7 @@ public class Sound {
 			}
 		}
 
-		public class ADSR { // change volume fancily
+		public class ADSR {
 			enum ADSRState {
 				Attack,
 				Decay,
@@ -229,10 +228,6 @@ public class Sound {
 					}
 					in.volume = lerp(decayPower, sustainPower, prog);
 				} else if (this.state == ADSRState.Sustain) {
-					if (this.prog >= 1) {
-						this.state = ADSRState.Release;
-						this.prog = 0;
-					}
 					in.volume = sustainPower;
 				} else {
 					prog += releaseTime / sampleRate;
@@ -276,6 +271,9 @@ public class Sound {
 			if (this.glide.isPresent()) {
 				out = this.glide.get().apply(out);
 			}
+			if (out.size() == 0) {
+				out = in;
+			}
 			return out;
 		}
 
@@ -286,6 +284,14 @@ public class Sound {
 			this.glide = glide;
 			this.adsr = adsr;
 			this.voices = voices;
+		}
+
+		public Effects() {
+			this.trem = Optional.empty();
+			this.flang = Optional.empty();
+			this.glide = Optional.empty();
+			this.adsr = Optional.empty();
+			this.voices = 5;
 		}
 	}
 
@@ -308,7 +314,7 @@ public class Sound {
 	public List<FreqVol> freqvols = new CopyOnWriteArrayList<>();
 	public Function<Double, Double> wave;
 	public Flags flags;
-	public Effects effects;
+	public Effects effects = new Effects();
 
 	public void setFreqvols(Chord chord, double vol) {
 		this.freqvols.clear();
@@ -337,13 +343,15 @@ public class Sound {
 		this.freqvols = new CopyOnWriteArrayList<FreqVol>(freqvols);
 		this.wave = wave;
 		this.flags = new Flags(SoundState.Running);
+		this.effects = new Effects();
 	}
 
 	public float sample() {
 		try {
 			double time = this.currentsample / (double) sampleRate;
 			double sample = 0;
-			for (FreqVol i : this.freqvols) {
+			List<FreqVol> effected = this.effects.apply(this.freqvols);
+			for (FreqVol i : effected) {
 				for (int over = 1; over <= this.effects.voices; over++) {
 					double pitch = i.frequency * Math.TAU * (over * 2);
 					double vol = i.volume / (over * 2);
@@ -351,7 +359,13 @@ public class Sound {
 				}
 			}
 			this.currentsample++;
-			return (float) (sample / (this.effects.voices));
+			double adj = (sample / (this.effects.voices));
+			if (adj < -1.0) {
+				adj = -1.0;
+			} else if (adj > 1.0) {
+				adj = 1.0;
+			}
+			return (float) adj;
 		} catch (NullPointerException e) {
 			System.err.println(e);
 		}

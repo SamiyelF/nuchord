@@ -11,6 +11,7 @@ import javax.swing.*;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.*;
 import java.util.Collections;
+import java.util.Optional;
 
 class Vars {
 	public static Function<Double, Double> sine = x -> Math.sin(x);
@@ -46,6 +47,11 @@ class Vars {
 
 class MultiKeyPressListener implements KeyListener {
 	final Set<Integer> keys = Collections.synchronizedSet(new HashSet<>());
+	private JFrame parentFrame;
+
+	public MultiKeyPressListener(JFrame frame) {
+		this.parentFrame = frame;
+	}
 
 	Chord.Variant handleChordVar() {
 		if (keys.contains(KeyEvent.VK_A)) {
@@ -135,9 +141,19 @@ class MultiKeyPressListener implements KeyListener {
 		return Vars.volume.get();
 	}
 
+	boolean shouldOpenEffectsMenu() {
+		return keys.contains(KeyEvent.VK_B);
+	}
+
 	@Override
 	public void keyPressed(KeyEvent e) {
 		keys.add(e.getKeyCode());
+		if (e.getKeyCode() == KeyEvent.VK_B) {
+			SwingUtilities.invokeLater(() -> {
+				EffectsSettingsMenu effectsMenu = new EffectsSettingsMenu(parentFrame, Vars.sound.get());
+				effectsMenu.setVisible(true);
+			});
+		}
 	}
 
 	@Override
@@ -147,25 +163,19 @@ class MultiKeyPressListener implements KeyListener {
 
 	@Override
 	public void keyTyped(KeyEvent e) {
-		// unused
 	}
 }
 
 public class Main {
 	public static void main(String[] args) throws InterruptedException, IOException {
-		/*
-		 * to do
-		 * To Add:
-		 * Add settings (volume, effect manager, waveform switcher, key switcher)
-		 */
-		JFrame frame = new JFrame("Window Title");
+		JFrame frame = new JFrame("NUCHORD - Always In Tune");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setSize(800, 600);
 		frame.setResizable(true);
 		frame.setFocusable(true);
 		frame.requestFocusInWindow();
 		frame.setLocation((1920 - 800) / 2, (1080 - 600) / 2);
-		MultiKeyPressListener listener = new MultiKeyPressListener();
+		MultiKeyPressListener listener = new MultiKeyPressListener(frame);
 		frame.addKeyListener(listener);
 		JPanel panel = new JPanel();
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -176,17 +186,44 @@ public class Main {
 		JLabel debuginfo = new JLabel("");
 		debuginfo.setVerticalAlignment(JLabel.BOTTOM);
 		panel.add(debuginfo);
+		JMenuBar menuBar = new JMenuBar();
+		JMenu settingsMenu = new JMenu("Settings");
+		JMenuItem effectsMenuItem = new JMenuItem("Effects Settings");
+		effectsMenuItem.addActionListener(e -> {
+			EffectsSettingsMenu effectsMenu = new EffectsSettingsMenu(frame, Vars.sound.get());
+			effectsMenu.setVisible(true);
+		});
+		settingsMenu.add(effectsMenuItem);
+		menuBar.add(settingsMenu);
+		frame.setJMenuBar(menuBar);
 		frame.setContentPane(panel);
 		frame.setVisible(true);
 		Thread gui = new Thread() {
 			public void run() {
 				while (true) {
 					StringBuilder text = new StringBuilder("<html>");
-					text.append(listener.keys).append("<br><br>");
+					text.append("Keys: ").append(listener.keys).append("<br><br>");
+					text.append("Current Frequencies:<br>");
 					for (FreqVol freqvol : Vars.sound.get().freqvols) {
-						text.append(freqvol.frequency).append("<br>");
+						text.append(String.format("%.2f Hz<br>", freqvol.frequency));
 					}
-					text.append(Vars.volume.get()).append("<br>");
+					text.append("<br>Volume: ").append(String.format("%.2f", Vars.volume.get())).append("<br>");
+					if (Vars.sound.get().effects != null) {
+						text.append("<br>Active Effects:<br>");
+						if (Vars.sound.get().effects.trem.isPresent()) {
+							text.append("- Tremolo<br>");
+						}
+						if (Vars.sound.get().effects.flang.isPresent()) {
+							text.append("- Flanger<br>");
+						}
+						if (Vars.sound.get().effects.adsr.isPresent()) {
+							text.append("- ADSR<br>");
+						}
+						if (Vars.sound.get().effects.glide.isPresent()) {
+							text.append("- Glide<br>");
+						}
+						text.append("Voices: ").append(Vars.sound.get().effects.voices).append("<br>");
+					}
 					text.append("</html>");
 					SwingUtilities.invokeLater(() -> {
 						debuginfo.setText(text.toString());
@@ -237,6 +274,8 @@ public class Main {
 		input.start();
 		Sound temp = Vars.sound.get();
 		temp.setFreqvols(Vars.chord.get(), 0);
+		temp.effects = temp.new Effects(
+				Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), 1);
 		Vars.sound.set(temp);
 		Vars.sound.get().play();
 		System.err.println("Sound playback stopped unexpectedly");
