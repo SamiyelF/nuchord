@@ -1,10 +1,8 @@
 import javax.sound.sampled.*;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.function.Function;
 import java.util.Objects;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -82,30 +80,31 @@ public class Sound {
 		this.flags = new Flags(SoundState.Running);
 	}
 
-	public short sample() {
+	public float sample() {
 		try {
 			double time = this.currentsample / (double) sampleRate;
-			double bigsample = 0;
+			double sample = 0;
 			int overtonecount = 5;
+			double totalvolume = 0;
 			for (FreqVol i : this.freqvols) {
-				for (int over = 0; over < overtonecount; over++) {
-					bigsample += this.wave.apply(time * i.frequency * Math.TAU * Math.pow(2, (int) over - (over /
-							2))) * i.volume
-							/ (over + 1);
+				for (int over = 1; over <= overtonecount; over++) {
+					double pitch = i.frequency * Math.TAU * (over * 2);
+					double vol = i.volume / (over * 2);
+					sample += this.wave.apply(time * pitch) * vol;
+					totalvolume += Math.abs(vol);
 				}
 			}
-			bigsample /= freqvols.size();
-			bigsample *= Short.MAX_VALUE / 5; // temporary fix, figure out a real way to stop overflow (based on overtonecount)
-			short sample = (short) bigsample;
-			return sample;
+			sample /= totalvolume * 1.5;
+			this.currentsample++;
+			return (float) sample;
 		} catch (NullPointerException e) {
 			System.err.println(e);
 		}
-		return 0;
+		return 0.0f;
 	}
 
 	public void play() {
-		AudioFormat format = new AudioFormat(sampleRate, 16, 1, true, true);
+		AudioFormat format = new AudioFormat(sampleRate, 32, 1, true, false);
 		SourceDataLine line;
 		try {
 			line = AudioSystem.getSourceDataLine(format);
@@ -115,14 +114,15 @@ public class Sound {
 			return;
 		}
 		line.start();
-
-		byte[] buffer = new byte[2];
 		while (this.flags.state == SoundState.Running) {
-			short sample = sample();
-			buffer[0] = (byte) ((sample >> 8) & 0xFF);
-			buffer[1] = (byte) (sample & 0xFF);
-			line.write(buffer, 0, 2);
-			this.currentsample++;
+			float floatSample = sample();
+			byte[] buffer = new byte[4];
+			int intSample = (int) (floatSample * Integer.MAX_VALUE);
+			buffer[0] = (byte) ((intSample >> 8 * 0) & 0xFF);
+			buffer[1] = (byte) ((intSample >> 8 * 1) & 0xFF);
+			buffer[2] = (byte) ((intSample >> 8 * 2) & 0xFF);
+			buffer[3] = (byte) ((intSample >> 8 * 3) & 0xFF);
+			line.write(buffer, 0, 4);
 		}
 	}
 }

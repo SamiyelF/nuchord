@@ -127,38 +127,34 @@ public class Main {
 		frame.addKeyListener(listener);
 		JPanel panel = new JPanel();
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-
 		String controlstext = new String(Files.readAllBytes(Paths.get("src/controls.html")), StandardCharsets.UTF_8);
 		JLabel info = new JLabel(controlstext);
 		info.setVerticalAlignment(JLabel.TOP);
 		panel.add(info);
-
 		JLabel debuginfo = new JLabel("");
 		debuginfo.setVerticalAlignment(JLabel.BOTTOM);
 		panel.add(debuginfo);
-
 		frame.setContentPane(panel);
-
 		frame.setVisible(true);
-
 		Thread gui = new Thread() {
 			public void run() {
 				while (true) {
 					StringBuilder text = new StringBuilder("<html>");
 					text.append(listener.keys).append("<br><br>");
-
 					for (FreqVol freqvol : Vars.sound.get().freqvols) {
 						text.append(freqvol.frequency).append("<br>");
 					}
 					text.append("</html>");
-
 					SwingUtilities.invokeLater(() -> {
 						debuginfo.setText(text.toString());
 					});
+					try {
+						Thread.sleep(10);
+					} catch (InterruptedException e) {
+					}
 				}
 			}
 		};
-
 		Thread input = new Thread() {
 			public void run() {
 				while (true) {
@@ -170,7 +166,6 @@ public class Main {
 						System.out.println("Quitting...");
 						System.exit(0);
 					}
-
 					Chord.Variant var = listener.handleChordVar();
 					Chord.Modifier mod = listener.handleChordMod();
 					Chord current = Vars.chord.get();
@@ -180,19 +175,23 @@ public class Main {
 					current.mod = mod;
 					current.var = var;
 					Vars.chord.set(current);
-
 					Sound newsound = Vars.sound.get();
 					newsound.setFreqvols(Vars.chord.get(), Vars.volume.get());
 					Vars.sound.set(newsound);
+					try {
+						Thread.sleep(10);
+					} catch (InterruptedException e) {
+					}
 				}
 			}
 		};
-
 		gui.start();
 		input.start();
 		Sound temp = Vars.sound.get();
 		temp.setFreqvols(Vars.chord.get(), 0);
 		Vars.sound.set(temp);
 		Vars.sound.get().play();
+		System.err.println("Sound playback stopped unexpectedly");
+		System.exit(1);
 	}
 }
