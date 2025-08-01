@@ -249,41 +249,84 @@ public class Sound {
 			}
 		}
 
+		public class Chorus {
+			public int voices;
+			public double detune;
+			public double depth;
+			public double rate;
+			private double phase = 0;
+
+			public Chorus(int voices, double detune, double depth, double rate) {
+				this.voices = voices;
+				this.detune = detune;
+				this.depth = depth;
+				this.rate = rate;
+			}
+
+			public Chorus(int voices, double detune) {
+				this(voices, detune, 0.5, 1.0);
+			}
+
+			public List<FreqVol> apply(FreqVol in) {
+				List<FreqVol> out = new ArrayList<>();
+				out.add(new FreqVol(in.frequency, in.volume / voices));
+				for (int i = 1; i < voices; i++) {
+					double voiceDetune = detune * (i - (voices - 1) / 2.0) / (voices - 1);
+					double time = currentsample / (double) sampleRate;
+					double lfo = Math.sin(2 * Math.PI * rate * time + phase + (i * Math.PI / voices));
+					double modulatedDetune = voiceDetune + (depth * lfo * 10.0);
+					double frequencyRatio = Math.pow(2.0, modulatedDetune / 1200.0);
+					double chorusFreq = in.frequency * frequencyRatio;
+					double chorusVol = in.volume / voices * (0.9 + 0.1 * Math.cos(lfo));
+					out.add(new FreqVol(chorusFreq, chorusVol));
+				}
+				return out;
+			}
+		}
+
 		public Optional<Tremelo> trem;
 		public Optional<Flanger> flang;
 		public Optional<Glide> glide;
 		public Optional<ADSR> adsr;
-		public int voices;
+		public Optional<Chorus> chorus;
 
-		public List<FreqVol> apply(List<FreqVol> in) {
-			List<FreqVol> out = new ArrayList<>();
-			for (FreqVol freqvol : in) {
-				if (this.trem.isPresent()) {
-					out.add(this.trem.get().apply(freqvol));
-				}
-				if (this.flang.isPresent()) {
-					out.add(this.flang.get().apply(freqvol));
-				}
-				if (this.adsr.isPresent()) {
-					out.add(this.adsr.get().apply(freqvol));
-				}
-			}
-			if (this.glide.isPresent()) {
-				out = this.glide.get().apply(out);
-			}
-			if (out.size() == 0) {
-				out = in;
-			}
-			return out;
-		}
-
-		public Effects(Optional<Tremelo> trem, Optional<Flanger> flang, Optional<Glide> glide, Optional<ADSR> adsr,
-				int voices) {
+		public Effects(Optional<Tremelo> trem, Optional<Flanger> flang, Optional<Glide> glide,
+				Optional<ADSR> adsr, Optional<Chorus> chorus) {
 			this.trem = trem;
 			this.flang = flang;
 			this.glide = glide;
 			this.adsr = adsr;
-			this.voices = voices;
+			this.chorus = chorus;
+		}
+
+		public List<FreqVol> apply(List<FreqVol> in) {
+			List<FreqVol> out = new ArrayList<>();
+			for (FreqVol freqvol : in) {
+				List<FreqVol> processedVoices = new ArrayList<>();
+				FreqVol currentVoice = new FreqVol(freqvol.frequency, freqvol.volume);
+				if (this.trem.isPresent()) {
+					currentVoice = this.trem.get().apply(currentVoice);
+				}
+				if (this.flang.isPresent()) {
+					currentVoice = this.flang.get().apply(currentVoice);
+				}
+				if (this.adsr.isPresent()) {
+					currentVoice = this.adsr.get().apply(currentVoice);
+				}
+				if (this.chorus.isPresent()) {
+					processedVoices.addAll(this.chorus.get().apply(currentVoice));
+				} else {
+					processedVoices.add(currentVoice);
+				}
+				out.addAll(processedVoices);
+			}
+			if (this.glide.isPresent()) {
+				out = this.glide.get().apply(out);
+			}
+			if (out.isEmpty()) {
+				out = new ArrayList<>(in);
+			}
+			return out;
 		}
 
 		public Effects() {
@@ -291,7 +334,7 @@ public class Sound {
 			this.flang = Optional.empty();
 			this.glide = Optional.empty();
 			this.adsr = Optional.empty();
-			this.voices = 5;
+			this.chorus = Optional.empty();
 		}
 	}
 
@@ -352,20 +395,23 @@ public class Sound {
 			double sample = 0;
 			List<FreqVol> effected = this.effects.apply(this.freqvols);
 			for (FreqVol i : effected) {
-				for (int over = 1; over <= this.effects.voices; over++) {
+				for (int over = 1; over <= 5; over++) {
 					double pitch = i.frequency * Math.TAU * (over * 2);
 					double vol = i.volume / (over * 2);
 					sample += this.wave.apply(time * pitch) * vol;
 				}
 			}
 			this.currentsample++;
-			double adj = (sample / (this.effects.voices));
-			if (adj < -1.0) {
-				adj = -1.0;
-			} else if (adj > 1.0) {
-				adj = 1.0;
+			int totalVoices = effected.size();
+			if (totalVoices > 0) {
+				sample = sample / Math.sqrt(totalVoices);
 			}
-			return (float) adj;
+			if (sample < -1.0) {
+				sample = -1.0;
+			} else if (sample > 1.0) {
+				sample = 1.0;
+			}
+			return (float) sample;
 		} catch (NullPointerException e) {
 			System.err.println(e);
 		}

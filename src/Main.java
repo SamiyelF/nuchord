@@ -38,7 +38,7 @@ class Vars {
 		return 2 * normalized / (2 * Math.PI) - 1;
 	};
 	public static AtomicReference<Sound> sound = new AtomicReference<Sound>(
-			new Sound(new ArrayList<FreqVol>(), sine));
+			new Sound(new ArrayList<FreqVol>(), saw));
 	public static AtomicReference<Chord> chord = new AtomicReference<>(
 			new Chord(new Chord.Note(Chord.Note.Letter.C, Chord.Note.Accidental.Natural, 2),
 					Chord.Variant.Tonic, Chord.Modifier.None, true));
@@ -168,7 +168,7 @@ class MultiKeyPressListener implements KeyListener {
 
 public class Main {
 	public static void main(String[] args) throws InterruptedException, IOException {
-		JFrame frame = new JFrame("NUCHORD - Always In Tune");
+		JFrame frame = new JFrame("NUCHORD - (c) Samiyel Frazier 2025");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setSize(800, 600);
 		frame.setResizable(true);
@@ -211,18 +211,35 @@ public class Main {
 					if (Vars.sound.get().effects != null) {
 						text.append("<br>Active Effects:<br>");
 						if (Vars.sound.get().effects.trem.isPresent()) {
-							text.append("- Tremolo<br>");
+							Sound.Effects.Tremelo trem = Vars.sound.get().effects.trem.get();
+							text.append("- Tremolo (Strength: ").append(String.format("%.2f", trem.stren))
+									.append(", Freq: ").append(String.format("%.1f Hz", trem.freq)).append(")<br>");
 						}
 						if (Vars.sound.get().effects.flang.isPresent()) {
-							text.append("- Flanger<br>");
+							Sound.Effects.Flanger flang = Vars.sound.get().effects.flang.get();
+							text.append("- Flanger (Strength: ").append(String.format("%.2f", flang.stren))
+									.append(", Freq: ").append(String.format("%.1f Hz", flang.freq)).append(")<br>");
 						}
 						if (Vars.sound.get().effects.adsr.isPresent()) {
-							text.append("- ADSR<br>");
+							text.append("- ADSR Envelope<br>");
 						}
 						if (Vars.sound.get().effects.glide.isPresent()) {
-							text.append("- Glide<br>");
+							Sound.Effects.Glide glide = Vars.sound.get().effects.glide.get();
+							text.append("- Glide (Duration: ").append(String.format("%.1fs", glide.totalTimeSeconds))
+									.append(", Active: ").append(glide.isActive()).append(")<br>");
 						}
-						text.append("Voices: ").append(Vars.sound.get().effects.voices).append("<br>");
+						if (Vars.sound.get().effects.chorus.isPresent()) {
+							Sound.Effects.Chorus chorus = Vars.sound.get().effects.chorus.get();
+							text.append("- Chorus (Voices: ").append(chorus.voices)
+									.append(", Detune: ").append(String.format("%.1f cents", chorus.detune))
+									.append(", Depth: ").append(String.format("%.2f", chorus.depth))
+									.append(", Rate: ").append(String.format("%.1f Hz", chorus.rate)).append(")<br>");
+						}
+						int totalVoices = Vars.sound.get().freqvols.size();
+						if (Vars.sound.get().effects.chorus.isPresent()) {
+							totalVoices *= Vars.sound.get().effects.chorus.get().voices;
+						}
+						text.append("<br>Total Active Voices: ").append(totalVoices).append("<br>");
 					}
 					text.append("</html>");
 					SwingUtilities.invokeLater(() -> {
@@ -231,6 +248,7 @@ public class Main {
 					try {
 						Thread.sleep(10);
 					} catch (InterruptedException e) {
+						break;
 					}
 				}
 			}
@@ -275,7 +293,7 @@ public class Main {
 		Sound temp = Vars.sound.get();
 		temp.setFreqvols(Vars.chord.get(), 0);
 		temp.effects = temp.new Effects(
-				Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), 1);
+				Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
 		Vars.sound.set(temp);
 		Vars.sound.get().play();
 		System.err.println("Sound playback stopped unexpectedly");
