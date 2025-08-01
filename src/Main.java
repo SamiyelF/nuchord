@@ -1,8 +1,5 @@
-import java.awt.BorderLayout;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -14,17 +11,37 @@ import javax.swing.*;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.*;
 import java.util.Collections;
-import java.util.List;
-import java.util.Scanner;
 
 class Vars {
-	public static AtomicReference<Function<Double, Double>> sineWave = new AtomicReference<>(x -> Math.sin(x));
+	public static Function<Double, Double> sine = x -> Math.sin(x);
+	public static Function<Double, Double> square = x -> {
+		double sinValue = Math.sin(x);
+		return sinValue >= 0 ? 1.0 : -1.0;
+	};
+	public static Function<Double, Double> triangle = x -> {
+		double normalized = x % (2 * Math.PI);
+		if (normalized < 0)
+			normalized += 2 * Math.PI;
+		if (normalized <= Math.PI / 2) {
+			return 2 * normalized / Math.PI;
+		} else if (normalized <= 3 * Math.PI / 2) {
+			return 2 - 2 * normalized / Math.PI;
+		} else {
+			return 2 * normalized / Math.PI - 4;
+		}
+	};
+	public static Function<Double, Double> saw = x -> {
+		double normalized = x % (2 * Math.PI);
+		if (normalized < 0)
+			normalized += 2 * Math.PI;
+		return 2 * normalized / (2 * Math.PI) - 1;
+	};
 	public static AtomicReference<Sound> sound = new AtomicReference<Sound>(
-			new Sound(new ArrayList<FreqVol>(), sineWave.get()));
+			new Sound(new ArrayList<FreqVol>(), sine));
 	public static AtomicReference<Chord> chord = new AtomicReference<>(
 			new Chord(new Chord.Note(Chord.Note.Letter.C, Chord.Note.Accidental.Natural, 2),
 					Chord.Variant.Tonic, Chord.Modifier.None, true));
-	public static AtomicReference<Float> volume = new AtomicReference<Float>(1.0f);
+	public static AtomicReference<Double> volume = new AtomicReference<Double>(0.5d);
 }
 
 class MultiKeyPressListener implements KeyListener {
@@ -91,6 +108,33 @@ class MultiKeyPressListener implements KeyListener {
 			return Chord.Modifier.None;
 	}
 
+	Function<Double, Double> handleWave() {
+		if (keys.contains(KeyEvent.VK_1)) {
+			return Vars.sine;
+		}
+		if (keys.contains(KeyEvent.VK_2)) {
+			return Vars.saw;
+		}
+		if (keys.contains(KeyEvent.VK_3)) {
+			return Vars.square;
+		}
+		if (keys.contains(KeyEvent.VK_4)) {
+			return Vars.triangle;
+		}
+		return Vars.sound.get().wave;
+	}
+
+	double handleVolume() {
+		double step = 0.01;
+		if (keys.contains(KeyEvent.VK_T)) {
+			return Vars.volume.get() + step;
+		}
+		if (keys.contains(KeyEvent.VK_G)) {
+			return Vars.volume.get() - step;
+		}
+		return Vars.volume.get();
+	}
+
 	@Override
 	public void keyPressed(KeyEvent e) {
 		keys.add(e.getKeyCode());
@@ -109,12 +153,10 @@ class MultiKeyPressListener implements KeyListener {
 
 public class Main {
 	public static void main(String[] args) throws InterruptedException, IOException {
-		/* TODO 
-			To Add:
-				Add instructions (e.g., press this to play that)
-				Add settings (volume, effect manager, waveform switcher, key switcher)
-				Add effects (Tremelo, Flanger, Chorus, Glide, ADSR, (Filter?))
-				Add waveforms (Saw, Triangle, Square, (sinsin?))
+		/*
+		 * to do
+		 * To Add:
+		 * Add settings (volume, effect manager, waveform switcher, key switcher)
 		 */
 		JFrame frame = new JFrame("Window Title");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -144,6 +186,7 @@ public class Main {
 					for (FreqVol freqvol : Vars.sound.get().freqvols) {
 						text.append(freqvol.frequency).append("<br>");
 					}
+					text.append(Vars.volume.get()).append("<br>");
 					text.append("</html>");
 					SwingUtilities.invokeLater(() -> {
 						debuginfo.setText(text.toString());
@@ -166,17 +209,22 @@ public class Main {
 						System.out.println("Quitting...");
 						System.exit(0);
 					}
+					Sound newsound = Vars.sound.get();
 					Chord.Variant var = listener.handleChordVar();
 					Chord.Modifier mod = listener.handleChordMod();
-					Chord current = Vars.chord.get();
-					if (current.mod == mod && current.var == var) {
-						continue;
+					Chord currentChord = Vars.chord.get();
+					if (!(currentChord.mod == mod && currentChord.var == var)
+							|| Vars.volume.get() != listener.handleVolume()) {
+						currentChord.mod = mod;
+						currentChord.var = var;
+						Vars.chord.set(currentChord);
+						newsound.setFreqvols(Vars.chord.get(), Vars.volume.get());
 					}
-					current.mod = mod;
-					current.var = var;
-					Vars.chord.set(current);
-					Sound newsound = Vars.sound.get();
-					newsound.setFreqvols(Vars.chord.get(), Vars.volume.get());
+					Function<Double, Double> wav = listener.handleWave();
+					if (!(newsound.wave == wav)) {
+						newsound.wave = wav;
+					}
+					Vars.volume.set(listener.handleVolume());
 					Vars.sound.set(newsound);
 					try {
 						Thread.sleep(10);
