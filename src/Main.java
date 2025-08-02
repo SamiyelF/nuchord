@@ -159,6 +159,10 @@ class MultiKeyPressListener implements KeyListener {
 	@Override
 	public void keyReleased(KeyEvent e) {
 		keys.remove(e.getKeyCode());
+		Vars.sound.get().effects.adsr.ifPresent(a -> {
+			a.release();
+		});
+
 	}
 
 	@Override
@@ -226,7 +230,7 @@ public class Main {
 						if (Vars.sound.get().effects.glide.isPresent()) {
 							Sound.Effects.Glide glide = Vars.sound.get().effects.glide.get();
 							text.append("- Glide (Duration: ").append(String.format("%.1fs", glide.totalTimeSeconds))
-									.append(", Active: ").append(glide.isActive()).append(")<br>");
+									.append(")<br>");
 						}
 						if (Vars.sound.get().effects.chorus.isPresent()) {
 							Sound.Effects.Chorus chorus = Vars.sound.get().effects.chorus.get();

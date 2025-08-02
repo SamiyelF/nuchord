@@ -79,123 +79,27 @@ public class Sound {
 		}
 
 		public class Glide {
-			public List<FreqVol> startChord, targetChord;
+			public List<FreqVol> previous;
 			public double totalTimeSeconds;
 			private double elapsedTimeSeconds;
-			private boolean isActive;
 
-			public Glide(List<FreqVol> startChord, List<FreqVol> targetChord, double totalTimeSeconds) {
-				this.startChord = new ArrayList<>(startChord);
-				this.targetChord = new ArrayList<>(targetChord);
+			public Glide(List<FreqVol> previous, double totalTimeSeconds) {
+				this.previous = new ArrayList<>(previous);
 				this.totalTimeSeconds = totalTimeSeconds;
 				this.elapsedTimeSeconds = 0.0;
-				this.isActive = true;
 			}
 
 			public Glide() {
-				this.startChord = new ArrayList<>();
-				this.targetChord = new ArrayList<>();
+				this.previous = new ArrayList<>();
 				this.totalTimeSeconds = 0.0;
 				this.elapsedTimeSeconds = 0.0;
-				this.isActive = false;
 			}
 
-			public void startGlide(List<FreqVol> from, List<FreqVol> to, double durationSeconds) {
-				this.startChord = new ArrayList<>(from);
-				this.targetChord = new ArrayList<>(to);
-				this.totalTimeSeconds = durationSeconds;
-				this.elapsedTimeSeconds = 0.0;
-				this.isActive = true;
-			}
-
-			public void stop() {
-				this.isActive = false;
-			}
-
-			public boolean isActive() {
-				return isActive && elapsedTimeSeconds < totalTimeSeconds;
-			}
-
-			public double getProgress() {
-				if (!isActive || totalTimeSeconds <= 0)
-					return 1.0;
-				return Math.min(elapsedTimeSeconds / totalTimeSeconds, 1.0);
-			}
-
-			public List<FreqVol> apply(List<FreqVol> currentChord) {
-				if (!isActive()) {
-					return new ArrayList<>(currentChord);
-				}
+			public List<FreqVol> apply(List<FreqVol> target) {
+				List<FreqVol> out = target; // will be midpoint between previous and target
+				previous = target;
 				elapsedTimeSeconds += 1.0 / sampleRate;
-				double progress = getProgress();
-				if (progress >= 1.0) {
-					this.isActive = false;
-					return new ArrayList<>(targetChord);
-				}
-				return interpolateChords(startChord, targetChord, progress);
-			}
-
-			private List<FreqVol> interpolateChords(List<FreqVol> from, List<FreqVol> to, double progress) {
-				List<FreqVol> result = new ArrayList<>();
-				if (from.size() == to.size()) {
-					for (int i = 0; i < from.size(); i++) {
-						FreqVol interpolated = from.get(i).lerp(to.get(i), progress);
-						result.add(interpolated);
-					}
-					return result;
-				}
-				List<FreqVol> fromCopy = new ArrayList<>(from);
-				List<FreqVol> toCopy = new ArrayList<>(to);
-				while (!fromCopy.isEmpty() && !toCopy.isEmpty()) {
-					FreqVol fromVoice = fromCopy.get(0);
-					FreqVol closestToVoice = findClosestFrequency(fromVoice, toCopy);
-					FreqVol interpolated = fromVoice.lerp(closestToVoice, progress);
-					result.add(interpolated);
-					fromCopy.remove(fromVoice);
-					toCopy.remove(closestToVoice);
-				}
-				for (FreqVol remainingFrom : fromCopy) {
-					double fadeOutVolume = remainingFrom.volume * (1.0 - progress);
-					result.add(new FreqVol(remainingFrom.frequency, fadeOutVolume));
-				}
-				for (FreqVol remainingTo : toCopy) {
-					double fadeInVolume = remainingTo.volume * progress;
-					result.add(new FreqVol(remainingTo.frequency, fadeInVolume));
-				}
-				return result;
-			}
-
-			private FreqVol findClosestFrequency(FreqVol target, List<FreqVol> candidates) {
-				if (candidates.isEmpty())
-					return target;
-				FreqVol closest = candidates.get(0);
-				double minDistance = Math.abs(target.frequency - closest.frequency);
-				for (FreqVol candidate : candidates) {
-					double distance = Math.abs(target.frequency - candidate.frequency);
-					if (distance < minDistance) {
-						minDistance = distance;
-						closest = candidate;
-					}
-				}
-				return closest;
-			}
-
-			private double easeInOutCubic(double t) {
-				return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-			}
-
-			public List<FreqVol> applyWithEasing(List<FreqVol> currentChord) {
-				if (!isActive()) {
-					return new ArrayList<>(currentChord);
-				}
-				elapsedTimeSeconds += 1.0 / sampleRate;
-				double linearProgress = getProgress();
-				if (linearProgress >= 1.0) {
-					this.isActive = false;
-					return new ArrayList<>(targetChord);
-				}
-				double easedProgress = easeInOutCubic(linearProgress);
-				return interpolateChords(startChord, targetChord, easedProgress);
+				return out;
 			}
 		}
 
@@ -234,6 +138,11 @@ public class Sound {
 					in.volume = lerp(sustainPower, releasePower, prog);
 				}
 				return in;
+			}
+
+			public void release() {
+				this.prog = 0;
+				this.state = ADSRState.Release;
 			}
 
 			public ADSR(double peak, double timetopeak, double sustain, double timetorelease) {
