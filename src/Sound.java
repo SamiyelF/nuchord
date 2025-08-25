@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.Optional;
+import java.util.Random;
 
 class FreqVol {
 	public double frequency, volume;
@@ -44,13 +45,12 @@ public class Sound {
 	public class Effects {
 		public class Tremelo {
 			public double stren, freq;
-			private double phase = 0;
 
 			public FreqVol apply(FreqVol in) {
-				double time = currentsample / (double) sampleRate;
-				double lfo = Math.sin(2 * Math.PI * freq * time + phase);
-				double volumeModulation = 1.0 + (stren * lfo * 0.5);
-				FreqVol out = new FreqVol(in.frequency, in.volume * volumeModulation);
+				double t = (double) currentsample / (double) sampleRate;
+				double lfo = Math.sin(Math.TAU * freq * t);
+				double modulation = (1 - stren) + (stren * (lfo + 1) / 2);
+				FreqVol out = new FreqVol(in.frequency, in.volume * modulation);
 				return out;
 			}
 
@@ -60,46 +60,35 @@ public class Sound {
 			}
 		}
 
-		public class Flanger {
-			public double stren, freq;
-			private double phase = 0;
+		public class Vibrato {
+			public double stren;
+			public double freq;
 
 			public FreqVol apply(FreqVol in) {
-				double time = currentsample / (double) sampleRate;
-				double lfo = Math.sin(2 * Math.PI * freq * time + phase);
-				double frequencyModulation = 1.0 + (stren * lfo * 0.1);
-				FreqVol out = new FreqVol(in.frequency * frequencyModulation, in.volume);
-				return out;
+				return in;
 			}
 
-			public Flanger(double strength, double frequency) {
+			public Vibrato(double strength, double frequency) {
 				this.stren = strength;
 				this.freq = frequency;
 			}
 		}
 
 		public class Glide {
-			public List<FreqVol> previous;
+			public List<FreqVol> start, stop, cur;
 			public double totalTimeSeconds;
 			private double elapsedTimeSeconds;
 
-			public Glide(List<FreqVol> previous, double totalTimeSeconds) {
-				this.previous = new ArrayList<>(previous);
-				this.totalTimeSeconds = totalTimeSeconds;
-				this.elapsedTimeSeconds = 0.0;
-			}
-
 			public Glide() {
-				this.previous = new ArrayList<>();
+				this.start = new ArrayList<>();
+				this.cur = new ArrayList<>();
+				this.stop = new ArrayList<>();
 				this.totalTimeSeconds = 0.0;
 				this.elapsedTimeSeconds = 0.0;
 			}
 
 			public List<FreqVol> apply(List<FreqVol> target) {
-				List<FreqVol> out = target; // will be midpoint between previous and target
-				previous = target;
-				elapsedTimeSeconds += 1.0 / sampleRate;
-				return out;
+				return target;
 			}
 		}
 
@@ -161,48 +150,39 @@ public class Sound {
 		public class Chorus {
 			public int voices;
 			public double detune;
-			public double depth;
-			public double rate;
-			private double phase = 0;
-
-			public Chorus(int voices, double detune, double depth, double rate) {
-				this.voices = voices;
-				this.detune = detune;
-				this.depth = depth;
-				this.rate = rate;
-			}
+			public List<Double> detunes = new ArrayList<>();
 
 			public Chorus(int voices, double detune) {
-				this(voices, detune, 0.5, 1.0);
+				this.voices = voices;
+				this.detune = detune;
+				for (int v = 0; v < this.voices; v++) {
+					double min = 0.0, max = this.detune;
+					double random = min + Math.random() * (max - min);
+					detunes.add(random);
+				}
 			}
 
 			public List<FreqVol> apply(FreqVol in) {
-				List<FreqVol> out = new ArrayList<>();
-				out.add(new FreqVol(in.frequency, in.volume / voices));
-				for (int i = 1; i < voices; i++) {
-					double voiceDetune = detune * (i - (voices - 1) / 2.0) / (voices - 1);
-					double time = currentsample / (double) sampleRate;
-					double lfo = Math.sin(2 * Math.PI * rate * time + phase + (i * Math.PI / voices));
-					double modulatedDetune = voiceDetune + (depth * lfo * 10.0);
-					double frequencyRatio = Math.pow(2.0, modulatedDetune / 1200.0);
-					double chorusFreq = in.frequency * frequencyRatio;
-					double chorusVol = in.volume / voices * (0.9 + 0.1 * Math.cos(lfo));
-					out.add(new FreqVol(chorusFreq, chorusVol));
+				List<FreqVol> out = new ArrayList<FreqVol>();
+				for (int v = 0; v < this.voices; v++) {
+					out.add(new FreqVol(in.frequency * detunes.get(v) * Math.pow(2, v), in.volume
+							/ (Math.pow(2, v))));
 				}
+				out.add(in);
 				return out;
 			}
 		}
 
 		public Optional<Tremelo> trem;
-		public Optional<Flanger> flang;
+		public Optional<Vibrato> vib;
 		public Optional<Glide> glide;
 		public Optional<ADSR> adsr;
 		public Optional<Chorus> chorus;
 
-		public Effects(Optional<Tremelo> trem, Optional<Flanger> flang, Optional<Glide> glide,
+		public Effects(Optional<Tremelo> trem, Optional<Vibrato> vib, Optional<Glide> glide,
 				Optional<ADSR> adsr, Optional<Chorus> chorus) {
 			this.trem = trem;
-			this.flang = flang;
+			this.vib = vib;
 			this.glide = glide;
 			this.adsr = adsr;
 			this.chorus = chorus;
@@ -216,8 +196,8 @@ public class Sound {
 				if (this.trem.isPresent()) {
 					currentVoice = this.trem.get().apply(currentVoice);
 				}
-				if (this.flang.isPresent()) {
-					currentVoice = this.flang.get().apply(currentVoice);
+				if (this.vib.isPresent()) {
+					currentVoice = this.vib.get().apply(currentVoice);
 				}
 				if (this.adsr.isPresent()) {
 					currentVoice = this.adsr.get().apply(currentVoice);
@@ -240,7 +220,7 @@ public class Sound {
 
 		public Effects() {
 			this.trem = Optional.empty();
-			this.flang = Optional.empty();
+			this.vib = Optional.empty();
 			this.glide = Optional.empty();
 			this.adsr = Optional.empty();
 			this.chorus = Optional.empty();
@@ -304,16 +284,14 @@ public class Sound {
 			double sample = 0;
 			List<FreqVol> effected = this.effects.apply(this.freqvols);
 			for (FreqVol i : effected) {
-				for (int over = 1; over <= 5; over++) {
-					double pitch = i.frequency * Math.TAU * (over * 2);
-					double vol = i.volume / (over * 2);
-					sample += this.wave.apply(time * pitch) * vol;
-				}
+				double pitch = i.frequency * Math.TAU;
+				double vol = i.volume;
+				sample += this.wave.apply(time * pitch) * vol;
 			}
 			this.currentsample++;
 			int totalVoices = effected.size();
 			if (totalVoices > 0) {
-				sample = sample / Math.sqrt(totalVoices);
+				sample = sample / totalVoices;
 			}
 			if (sample < -1.0) {
 				sample = -1.0;

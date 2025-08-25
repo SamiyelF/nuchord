@@ -10,11 +10,11 @@ public class EffectsSettingsMenu extends JDialog {
 	private JSlider tremoloFrequency;
 	private JLabel tremoloStrengthLabel;
 	private JLabel tremoloFrequencyLabel;
-	private JCheckBox flangerEnabled;
-	private JSlider flangerStrength;
-	private JSlider flangerFrequency;
-	private JLabel flangerStrengthLabel;
-	private JLabel flangerFrequencyLabel;
+	private JCheckBox vibratoEnabled;
+	private JSlider vibratoStrength;
+	private JSlider vibratoFrequency;
+	private JLabel vibratoStrengthLabel;
+	private JLabel vibratoFrequencyLabel;
 	private JCheckBox adsrEnabled;
 	private JSlider adsrPeak;
 	private JSlider adsrTimeToPeak;
@@ -31,12 +31,8 @@ public class EffectsSettingsMenu extends JDialog {
 	private JCheckBox chorusEnabled;
 	private JSlider chorusVoices;
 	private JSlider chorusDetune;
-	private JSlider chorusDepth;
-	private JSlider chorusRate;
 	private JLabel chorusVoicesLabel;
 	private JLabel chorusDetuneLabel;
-	private JLabel chorusDepthLabel;
-	private JLabel chorusRateLabel;
 	private JButton presetClean;
 	private JButton presetVibrato;
 	private JButton presetChorus;
@@ -60,11 +56,11 @@ public class EffectsSettingsMenu extends JDialog {
 		tremoloFrequency = new JSlider(1, 10, 5);
 		tremoloStrengthLabel = new JLabel("Strength: 0.5");
 		tremoloFrequencyLabel = new JLabel("Frequency: 5.0 Hz");
-		flangerEnabled = new JCheckBox("Enable Flanger");
-		flangerStrength = new JSlider(0, 10, 3);
-		flangerFrequency = new JSlider(1, 10, 2);
-		flangerStrengthLabel = new JLabel("Strength: 0.3");
-		flangerFrequencyLabel = new JLabel("Frequency: 2.0 Hz");
+		vibratoEnabled = new JCheckBox("Enable Vibrato");
+		vibratoStrength = new JSlider(0, 10, 3);
+		vibratoFrequency = new JSlider(1, 10, 2);
+		vibratoStrengthLabel = new JLabel("Strength: 0.3");
+		vibratoFrequencyLabel = new JLabel("Frequency: 2.0 Hz");
 		adsrEnabled = new JCheckBox("Enable ADSR Envelope");
 		adsrPeak = new JSlider(0, 100, 80);
 		adsrTimeToPeak = new JSlider(1, 50, 10);
@@ -80,21 +76,17 @@ public class EffectsSettingsMenu extends JDialog {
 		startGlideButton = new JButton("Start Glide Test");
 		chorusEnabled = new JCheckBox("Enable Chorus");
 		chorusVoices = new JSlider(2, 8, 4);
-		chorusDetune = new JSlider(5, 50, 20);
-		chorusDepth = new JSlider(0, 100, 50);
-		chorusRate = new JSlider(1, 50, 10);
+		chorusDetune = new JSlider(0, 10, 5);
 		chorusVoicesLabel = new JLabel("Voices: 4");
 		chorusDetuneLabel = new JLabel("Detune: 20 cents");
-		chorusDepthLabel = new JLabel("Depth: 0.5");
-		chorusRateLabel = new JLabel("Rate: 1.0 Hz");
 		presetClean = new JButton("Clean");
 		presetVibrato = new JButton("Vibrato");
 		presetChorus = new JButton("Chorus");
 		presetOrgan = new JButton("Organ");
 		configureSlider(tremoloStrength);
 		configureSlider(tremoloFrequency);
-		configureSlider(flangerStrength);
-		configureSlider(flangerFrequency);
+		configureSlider(vibratoStrength);
+		configureSlider(vibratoFrequency);
 		configureSlider(adsrPeak);
 		configureSlider(adsrTimeToPeak);
 		configureSlider(adsrSustain);
@@ -102,8 +94,6 @@ public class EffectsSettingsMenu extends JDialog {
 		configureSlider(glideDuration);
 		configureSlider(chorusVoices);
 		configureSlider(chorusDetune);
-		configureSlider(chorusDepth);
-		configureSlider(chorusRate);
 		loadPreset("clean");
 	}
 
@@ -123,10 +113,10 @@ public class EffectsSettingsMenu extends JDialog {
 				tremoloStrengthLabel, tremoloStrength,
 				tremoloFrequencyLabel, tremoloFrequency
 		});
-		JPanel flangerPanel = createEffectPanel("Flanger", new Component[] {
-				flangerEnabled,
-				flangerStrengthLabel, flangerStrength,
-				flangerFrequencyLabel, flangerFrequency
+		JPanel vibratoPanel = createEffectPanel("Vibrato", new Component[] {
+				vibratoEnabled,
+				vibratoStrengthLabel, vibratoStrength,
+				vibratoFrequencyLabel, vibratoFrequency
 		});
 		JPanel adsrPanel = createEffectPanel("ADSR Envelope", new Component[] {
 				adsrEnabled,
@@ -144,8 +134,6 @@ public class EffectsSettingsMenu extends JDialog {
 				chorusEnabled,
 				chorusVoicesLabel, chorusVoices,
 				chorusDetuneLabel, chorusDetune,
-				chorusDepthLabel, chorusDepth,
-				chorusRateLabel, chorusRate
 		});
 		JPanel presetsPanel = new JPanel(new GridLayout(1, 4, 5, 5));
 		presetsPanel.setBorder(new TitledBorder("Presets"));
@@ -159,7 +147,7 @@ public class EffectsSettingsMenu extends JDialog {
 		buttonPanel.add(cancelButton);
 		buttonPanel.add(okButton);
 		mainPanel.add(tremoloPanel);
-		mainPanel.add(flangerPanel);
+		mainPanel.add(vibratoPanel);
 		mainPanel.add(adsrPanel);
 		mainPanel.add(glidePanel);
 		mainPanel.add(chorusPanel);
@@ -196,13 +184,13 @@ public class EffectsSettingsMenu extends JDialog {
 			double value = tremoloFrequency.getValue();
 			tremoloFrequencyLabel.setText("Frequency: " + String.format("%.1f Hz", value));
 		});
-		flangerStrength.addChangeListener(e -> {
-			double value = flangerStrength.getValue() / 100.0;
-			flangerStrengthLabel.setText("Strength: " + String.format("%.2f", value));
+		vibratoStrength.addChangeListener(e -> {
+			double value = vibratoStrength.getValue() / 100.0;
+			vibratoStrengthLabel.setText("Strength: " + String.format("%.2f", value));
 		});
-		flangerFrequency.addChangeListener(e -> {
-			double value = flangerFrequency.getValue();
-			flangerFrequencyLabel.setText("Frequency: " + String.format("%.1f Hz", value));
+		vibratoFrequency.addChangeListener(e -> {
+			double value = vibratoFrequency.getValue();
+			vibratoFrequencyLabel.setText("Frequency: " + String.format("%.1f Hz", value));
 		});
 		adsrPeak.addChangeListener(e -> {
 			double value = adsrPeak.getValue() / 100.0;
@@ -232,14 +220,6 @@ public class EffectsSettingsMenu extends JDialog {
 			int value = chorusDetune.getValue();
 			chorusDetuneLabel.setText("Detune: " + value + " cents");
 		});
-		chorusDepth.addChangeListener(e -> {
-			double value = chorusDepth.getValue() / 100.0;
-			chorusDepthLabel.setText("Depth: " + String.format("%.2f", value));
-		});
-		chorusRate.addChangeListener(e -> {
-			double value = chorusRate.getValue() / 10.0;
-			chorusRateLabel.setText("Rate: " + String.format("%.1f Hz", value));
-		});
 		presetClean.addActionListener(e -> loadPreset("clean"));
 		presetVibrato.addActionListener(e -> loadPreset("vibrato"));
 		presetChorus.addActionListener(e -> loadPreset("chorus"));
@@ -251,35 +231,33 @@ public class EffectsSettingsMenu extends JDialog {
 			if (currentSound.effects.trem.isPresent()) {
 				tremoloEnabled.setSelected(true);
 				Sound.Effects.Tremelo trem = currentSound.effects.trem.get();
-				tremoloStrength.setValue((int) (trem.stren * 100));
+				tremoloStrength.setValue((int) (trem.stren * 100.0));
 				tremoloFrequency.setValue((int) trem.freq);
 			}
-			if (currentSound.effects.flang.isPresent()) {
-				flangerEnabled.setSelected(true);
-				Sound.Effects.Flanger flang = currentSound.effects.flang.get();
-				flangerStrength.setValue((int) (flang.stren * 100));
-				flangerFrequency.setValue((int) flang.freq);
+			if (currentSound.effects.vib.isPresent()) {
+				vibratoEnabled.setSelected(true);
+				Sound.Effects.Vibrato vib = currentSound.effects.vib.get();
+				vibratoStrength.setValue((int) (vib.stren * 100.0));
+				vibratoFrequency.setValue((int) vib.freq);
 			}
 			if (currentSound.effects.adsr.isPresent()) {
 				adsrEnabled.setSelected(true);
 				Sound.Effects.ADSR adsr = currentSound.effects.adsr.get();
-				adsrPeak.setValue((int) (adsr.decayPower * 100));
-				adsrTimeToPeak.setValue((int) (adsr.attackTime * 10));
-				adsrSustain.setValue((int) (adsr.sustainPower * 100));
-				adsrTimeToRelease.setValue((int) (adsr.releaseTime * 10));
+				adsrPeak.setValue((int) (adsr.decayPower * 100.0));
+				adsrTimeToPeak.setValue((int) (adsr.attackTime * 10.0));
+				adsrSustain.setValue((int) (adsr.sustainPower * 100.0));
+				adsrTimeToRelease.setValue((int) (adsr.releaseTime * 10.0));
 			}
 			if (currentSound.effects.glide.isPresent()) {
 				glideEnabled.setSelected(true);
 				Sound.Effects.Glide glide = currentSound.effects.glide.get();
-				glideDuration.setValue((int) (glide.totalTimeSeconds * 10));
+				glideDuration.setValue((int) (glide.totalTimeSeconds * 10.0));
 			}
 			if (currentSound.effects.chorus.isPresent()) {
 				chorusEnabled.setSelected(true);
 				Sound.Effects.Chorus chorus = currentSound.effects.chorus.get();
 				chorusVoices.setValue(chorus.voices);
-				chorusDetune.setValue((int) chorus.detune);
-				chorusDepth.setValue((int) (chorus.depth * 100));
-				chorusRate.setValue((int) (chorus.rate * 10));
+				chorusDetune.setValue((int) (chorus.detune * 10.0));
 			}
 		}
 		updateAllLabels();
@@ -287,7 +265,7 @@ public class EffectsSettingsMenu extends JDialog {
 
 	private void applySettings() {
 		Optional<Sound.Effects.Tremelo> trem = Optional.empty();
-		Optional<Sound.Effects.Flanger> flang = Optional.empty();
+		Optional<Sound.Effects.Vibrato> vib = Optional.empty();
 		Optional<Sound.Effects.Glide> glide = Optional.empty();
 		Optional<Sound.Effects.ADSR> adsr = Optional.empty();
 		if (tremoloEnabled.isSelected()) {
@@ -295,10 +273,10 @@ public class EffectsSettingsMenu extends JDialog {
 			double frequency = tremoloFrequency.getValue();
 			trem = Optional.of(currentSound.new Effects().new Tremelo(strength, frequency));
 		}
-		if (flangerEnabled.isSelected()) {
-			double strength = flangerStrength.getValue() / 100.0;
-			double frequency = flangerFrequency.getValue();
-			flang = Optional.of(currentSound.new Effects().new Flanger(strength, frequency));
+		if (vibratoEnabled.isSelected()) {
+			double strength = vibratoStrength.getValue() / 100.0;
+			double frequency = vibratoFrequency.getValue();
+			vib = Optional.of(currentSound.new Effects().new Vibrato(strength, frequency));
 		}
 		if (adsrEnabled.isSelected()) {
 			double peak = adsrPeak.getValue() / 100.0;
@@ -313,12 +291,10 @@ public class EffectsSettingsMenu extends JDialog {
 		Optional<Sound.Effects.Chorus> chorus = Optional.empty();
 		if (chorusEnabled.isSelected()) {
 			int voices = chorusVoices.getValue();
-			double detune = chorusDetune.getValue();
-			double depth = chorusDepth.getValue() / 100.0;
-			double rate = chorusRate.getValue() / 10.0;
-			chorus = Optional.of(currentSound.new Effects().new Chorus(voices, detune, depth, rate));
+			double detune = chorusDetune.getValue() / 10.0;
+			chorus = Optional.of(currentSound.new Effects().new Chorus(voices, detune));
 		}
-		currentSound.effects = currentSound.new Effects(trem, flang, glide, adsr, chorus);
+		currentSound.effects = currentSound.new Effects(trem, vib, glide, adsr, chorus);
 		JOptionPane.showMessageDialog(this, "Effects applied successfully!", "Success",
 				JOptionPane.INFORMATION_MESSAGE);
 	}
@@ -327,7 +303,7 @@ public class EffectsSettingsMenu extends JDialog {
 		switch (presetName.toLowerCase()) {
 			case "clean":
 				tremoloEnabled.setSelected(false);
-				flangerEnabled.setSelected(false);
+				vibratoEnabled.setSelected(false);
 				adsrEnabled.setSelected(false);
 				glideEnabled.setSelected(false);
 				break;
@@ -335,29 +311,27 @@ public class EffectsSettingsMenu extends JDialog {
 				tremoloEnabled.setSelected(true);
 				tremoloStrength.setValue(30);
 				tremoloFrequency.setValue(6);
-				flangerEnabled.setSelected(false);
+				vibratoEnabled.setSelected(false);
 				adsrEnabled.setSelected(false);
 				glideEnabled.setSelected(false);
 				break;
 			case "chorus":
 				tremoloEnabled.setSelected(false);
-				flangerEnabled.setSelected(true);
-				flangerStrength.setValue(20);
-				flangerFrequency.setValue(3);
+				vibratoEnabled.setSelected(true);
+				vibratoStrength.setValue(20);
+				vibratoFrequency.setValue(3);
 				adsrEnabled.setSelected(false);
 				glideEnabled.setSelected(true);
 				glideDuration.setValue(20);
 				chorusEnabled.setSelected(true);
 				chorusVoices.setValue(6);
 				chorusDetune.setValue(25);
-				chorusDepth.setValue(70);
-				chorusRate.setValue(15);
 				break;
 			case "organ":
 				tremoloEnabled.setSelected(true);
 				tremoloStrength.setValue(15);
 				tremoloFrequency.setValue(4);
-				flangerEnabled.setSelected(false);
+				vibratoEnabled.setSelected(false);
 				adsrEnabled.setSelected(true);
 				adsrPeak.setValue(90);
 				adsrTimeToPeak.setValue(5);
@@ -372,8 +346,8 @@ public class EffectsSettingsMenu extends JDialog {
 	private void updateAllLabels() {
 		tremoloStrengthLabel.setText("Strength: " + String.format("%.2f", tremoloStrength.getValue() / 100.0));
 		tremoloFrequencyLabel.setText("Frequency: " + String.format("%.1f Hz", (double) tremoloFrequency.getValue()));
-		flangerStrengthLabel.setText("Strength: " + String.format("%.2f", flangerStrength.getValue() / 100.0));
-		flangerFrequencyLabel.setText("Frequency: " + String.format("%.1f Hz", (double) flangerFrequency.getValue()));
+		vibratoStrengthLabel.setText("Strength: " + String.format("%.2f", vibratoStrength.getValue() / 100.0));
+		vibratoFrequencyLabel.setText("Frequency: " + String.format("%.1f Hz", (double) vibratoFrequency.getValue()));
 		adsrPeakLabel.setText("Peak: " + String.format("%.2f", adsrPeak.getValue() / 100.0));
 		adsrTimeToPeakLabel.setText("Time to Peak: " + String.format("%.1fs", adsrTimeToPeak.getValue() / 10.0));
 		adsrSustainLabel.setText("Sustain: " + String.format("%.2f", adsrSustain.getValue() / 100.0));
@@ -381,7 +355,5 @@ public class EffectsSettingsMenu extends JDialog {
 		glideDurationLabel.setText("Duration: " + String.format("%.1fs", glideDuration.getValue() / 10.0));
 		chorusVoicesLabel.setText("Voices: " + chorusVoices.getValue());
 		chorusDetuneLabel.setText("Detune: " + chorusDetune.getValue() + " cents");
-		chorusDepthLabel.setText("Depth: " + String.format("%.2f", chorusDepth.getValue() / 100.0));
-		chorusRateLabel.setText("Rate: " + String.format("%.1f Hz", chorusRate.getValue() / 10.0));
 	}
 }

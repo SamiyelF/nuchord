@@ -40,7 +40,7 @@ class Vars {
 	public static AtomicReference<Sound> sound = new AtomicReference<Sound>(
 			new Sound(new ArrayList<FreqVol>(), saw));
 	public static AtomicReference<Chord> chord = new AtomicReference<>(
-			new Chord(new Chord.Note(Chord.Note.Letter.C, Chord.Note.Accidental.Natural, 2),
+			new Chord(new Chord.Note(Chord.Note.Letter.G, Chord.Note.Accidental.Sharp, 3),
 					Chord.Variant.Tonic, Chord.Modifier.None, true));
 	public static AtomicReference<Double> volume = new AtomicReference<Double>(0.5d);
 }
@@ -174,11 +174,11 @@ public class Main {
 	public static void main(String[] args) throws InterruptedException, IOException {
 		JFrame frame = new JFrame("NUCHORD - (c) Samiyel Frazier 2025");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setSize(800, 600);
+		frame.setSize(500, 600);
 		frame.setResizable(true);
 		frame.setFocusable(true);
 		frame.requestFocusInWindow();
-		frame.setLocation((1920 - 800) / 2, (1080 - 600) / 2);
+		frame.setLocation((1920 - 500) / 2, (1080 - 600) / 2);
 		MultiKeyPressListener listener = new MultiKeyPressListener(frame);
 		frame.addKeyListener(listener);
 		JPanel panel = new JPanel();
@@ -219,10 +219,10 @@ public class Main {
 							text.append("- Tremolo (Strength: ").append(String.format("%.2f", trem.stren))
 									.append(", Freq: ").append(String.format("%.1f Hz", trem.freq)).append(")<br>");
 						}
-						if (Vars.sound.get().effects.flang.isPresent()) {
-							Sound.Effects.Flanger flang = Vars.sound.get().effects.flang.get();
-							text.append("- Flanger (Strength: ").append(String.format("%.2f", flang.stren))
-									.append(", Freq: ").append(String.format("%.1f Hz", flang.freq)).append(")<br>");
+						if (Vars.sound.get().effects.vib.isPresent()) {
+							Sound.Effects.Vibrato vib = Vars.sound.get().effects.vib.get();
+							text.append("- Vibrato (Strength: ").append(String.format("%.2f", vib.stren))
+									.append(", Freq: ").append(String.format("%.1f Hz", vib.freq)).append(")<br>");
 						}
 						if (Vars.sound.get().effects.adsr.isPresent()) {
 							text.append("- ADSR Envelope<br>");
@@ -236,8 +236,7 @@ public class Main {
 							Sound.Effects.Chorus chorus = Vars.sound.get().effects.chorus.get();
 							text.append("- Chorus (Voices: ").append(chorus.voices)
 									.append(", Detune: ").append(String.format("%.1f cents", chorus.detune))
-									.append(", Depth: ").append(String.format("%.2f", chorus.depth))
-									.append(", Rate: ").append(String.format("%.1f Hz", chorus.rate)).append(")<br>");
+									.append("<br>");
 						}
 						int totalVoices = Vars.sound.get().freqvols.size();
 						if (Vars.sound.get().effects.chorus.isPresent()) {

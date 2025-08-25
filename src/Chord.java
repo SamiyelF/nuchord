@@ -217,6 +217,7 @@ public class Chord {
 		}
 		Note root = this.key.offset_semitones(rootoffset);
 		ArrayList<Note> noteslist = new ArrayList<Note>();
+		noteslist.add(root.offset_semitones(-12));
 		noteslist.add(root);
 		switch (this.mod) {
 			case None:
